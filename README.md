@@ -137,7 +137,7 @@ Contributions, ideas, and feedback are welcome.
 
 ## 📜 License
 
-This project is open-source and available under the **MIT License**.
+This project is open-source and available under the **[MIT License](https://github.com/DiesesFloo/MyRecipes/blob/main/LICENSE)**.
 
 ---
 
