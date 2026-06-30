@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "eu.diesesfloo.myrecipes.recipes.proto";
+option java_outer_classname = "RecipesProto";
+
+service RecipeService {
+  rpc AddRecipe(CreateRecipeRequest) returns (ChangeResponse);
+  rpc DeleteRecipe(DeleteRecipeRequest) returns (ChangeResponse);
+  rpc UpdateRecipe(UpdateRecipeRequest) returns (ChangeResponse);
+  rpc GetRecipeById(GetRecipeByIdRequest) returns (GetRecipeByIdResponse);
+  rpc GetRecipesByCategory(GetRecipesByCategoryRequest) returns (GetRecipesByCategoryResponse);
+}
+
+message CreateRecipeRequest {
+  string category = 1;
+  repeated string ingredients = 2;
+  uint32 difficulty = 3;
+  uint32 servings = 4;
+  uint32 cooking_time_minutes = 5;
+  uint32 calories = 6;
+  uint32 proteins = 7;
+  string title = 8;
+  string description = 9;
+  string image_url = 10;
+  repeated RecipeStep steps = 11;
+  repeated string tags = 12;
+}
+
+message GetRecipeByIdRequest {
+  string id = 1;
+}
+
+message GetRecipesByCategoryRequest {
+  string category = 1;
+  uint32 amount = 2;
+  uint32 site = 3;
+}
+
+message GetRecipeByIdResponse {
+  optional string id = 1;
+  optional string category = 2;
+  repeated string ingredients = 3;
+  optional uint32 difficulty = 4;
+  optional int32 servings = 5;
+  optional int32 cooking_time_minutes = 6;
+  optional int32 calories = 7;
+  optional int32 proteins = 8;
+  optional string title = 9;
+  optional string description = 10;
+  optional string image_url = 11;
+  repeated RecipeStep steps = 12;
+  repeated string tags = 13;
+
+  optional uint32 error = 14;
+}
+
+message GetRecipesByCategoryResponse {
+  repeated ShortRecipe recipes = 1;
+
+  optional uint32 error = 2;
+}
+
+message ShortRecipe {
+  string category = 1;
+  uint32 difficulty = 2;
+  uint32 cooking_time_minutes = 3;
+  uint32 calories = 4;
+  uint32 proteins = 5;
+  string title = 6;
+  string image_url = 7;
+}
+
+message UpdateRecipeRequest {
+  string id = 1;
+  optional string category = 2;
+  repeated string ingredients = 3;
+  optional uint32 difficulty = 4;
+  optional uint32 servings = 5;
+  optional uint32 cooking_time_minutes = 6;
+  optional uint32 calories = 7;
+  optional uint32 proteins = 8;
+  optional string title = 9;
+  optional string description = 10;
+  optional string image_url = 11;
+  repeated RecipeStep steps = 12;
+  repeated string tags = 13;
+}
+
+message RecipeStep {
+  RecipeStepType type = 1;
+  string instruction = 2;
+  optional uint32 timer = 3;
+}
+
+message DeleteRecipeRequest {
+  string uuid = 1;
+  optional string reason = 2;
+}
+
+enum RecipeStepType {
+  DEFAULT = 0;
+  TIMER = 1;
+}
+
+message ChangeResponse {
+  bool success = 1;
+  optional uint32 error = 2;
+}
