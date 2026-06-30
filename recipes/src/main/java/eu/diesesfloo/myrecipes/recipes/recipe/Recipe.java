@@ -1,8 +1,8 @@
 package eu.diesesfloo.myrecipes.recipes.recipe;
 
-import eu.diesesfloo.myrecipes.recipes.recipe.step.RecipeStep;
+import eu.diesesfloo.myrecipes.recipes.recipe.step.Step;
+import lombok.Builder;
 import lombok.Data;
-import lombok.experimental.Accessors;
 import org.springframework.data.cassandra.core.mapping.PrimaryKey;
 import org.springframework.data.cassandra.core.mapping.Table;
 
@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Table("recipes_by_id")
 @Data
-@Accessors(chain=true)
+@Builder
 public class Recipe {
 
     @PrimaryKey
@@ -38,7 +38,7 @@ public class Recipe {
 
     private String imageUrl;
 
-    private List<RecipeStep> steps;
+    private List<Step> steps;
 
     private Set<String> tags;
 

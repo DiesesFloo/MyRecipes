@@ -1,12 +1,9 @@
 package eu.diesesfloo.myrecipes.recipes.recipe;
 
 import eu.diesesfloo.myrecipes.recipes.proto.*;
-import eu.diesesfloo.myrecipes.recipes.recipe.step.StepType;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.grpc.server.service.GrpcService;
-
-import java.util.List;
 
 /**
  * gRPC service implementation for managing recipes.
@@ -17,10 +14,63 @@ import java.util.List;
 public class RecipeGrpcService extends RecipeServiceGrpc.RecipeServiceImplBase {
 
     private final RecipeService recipeService;
+    private final RecipeMapper recipeMapper;
 
+    /**
+     * Add a new recipe based on the provided request.
+     *
+     * @param request          The create request containing the recipe data.
+     * @param responseObserver StreamObserver to send the response back to the client.
+     */
     @Override
     public void addRecipe(CreateRecipeRequest request, StreamObserver<ChangeResponse> responseObserver) {
+        recipeService.saveRecipe(recipeMapper.fromCreateRequest(request));
 
+        responseObserver.onNext(ChangeResponse.newBuilder().setSuccess(true).build());
+    }
+
+    /**
+     * Delete a recipe based on the provided request.
+     *
+     * @param request          The delete request containing the recipe ID to be deleted.
+     * @param responseObserver StreamObserver to send the response back to the client.
+     */
+    @Override
+    public void deleteRecipe(DeleteRecipeRequest request, StreamObserver<ChangeResponse> responseObserver) {
+        recipeService.deleteRecipe(request.getUuid());
+        responseObserver.onNext(ChangeResponse.newBuilder().setSuccess(true).build());
+    }
+
+    /**
+     * Update an existing recipe based on the provided request.
+     *
+     * @param request          The update request containing the new recipe data.
+     * @param responseObserver StreamObserver to send the response back to the client.
+     */
+    @Override
+    public void updateRecipe(UpdateRecipeRequest request, StreamObserver<ChangeResponse> responseObserver) {
+        recipeService.getRecipeById(request.getId())
+                .ifPresentOrElse(
+                        recipe -> responseObserver.onNext(handleUpdate(request, recipe)),
+                        () -> responseObserver.onNext(ChangeResponse.newBuilder()
+                                .setSuccess(false)
+                                .setError(404)
+                                .build())
+                );
+    }
+
+    /**
+     * Handle the update of a recipe based on the provided request and existing recipe.
+     *
+     * @param request The update request containing the new recipe data.
+     * @param recipe  The existing recipe to be updated.
+     * @return ChangeResponse indicating the success or failure of the update operation.
+     */
+    private ChangeResponse handleUpdate(UpdateRecipeRequest request, Recipe recipe) {
+        recipeMapper.applyUpdates(request, recipe);
+
+        recipeService.saveRecipe(recipe);
+        return ChangeResponse.newBuilder().setSuccess(true).build();
     }
 
     /**
@@ -40,59 +90,12 @@ public class RecipeGrpcService extends RecipeServiceGrpc.RecipeServiceImplBase {
      * @param request Request containing the ID of the recipe to retrieve.
      * @return GetRecipeByIdResponse containing the recipe details or an error code if not found.
      */
-    public GetRecipeByIdResponse getRecipeById(GetRecipeByIdRequest request) {
+    private GetRecipeByIdResponse getRecipeById(GetRecipeByIdRequest request) {
         return recipeService.getRecipeById(request.getId())
-                .map(this::convertToGetByIdResponse)
+                .map(recipeMapper::toGetResponse)
                 .orElseGet(() -> GetRecipeByIdResponse.newBuilder()
                         .setError(404)
                         .build());
     }
 
-    /**
-     * Convert a Recipe object to a GetRecipeByIdResponse.
-     *
-     * @param recipe The Recipe object to convert.
-     * @return GetRecipeByIdResponse containing the recipe details.
-     */
-    private GetRecipeByIdResponse convertToGetByIdResponse(Recipe recipe) {
-        return GetRecipeByIdResponse.newBuilder()
-                .setId(recipe.getId().toString())
-                .setCategory(recipe.getCategory())
-                .addAllIngredients(recipe.getIngredients())
-                .setDifficulty(recipe.getDifficulty())
-                .setServings(recipe.getServings())
-                .setCookingTimeMinutes(recipe.getCookingTimeMinutes())
-                .setCalories(recipe.getCalories())
-                .setProteins(recipe.getProteins())
-                .setTitle(recipe.getTitle())
-                .setDescription(recipe.getDescription())
-                .setImageUrl(recipe.getImageUrl())
-                .addAllSteps(getRecipeSteps(recipe))
-                .addAllTags(recipe.getTags())
-                .build();
-    }
-
-    /**
-     * Convert the steps of a Recipe object to a list of RecipeStep objects.
-     *
-     * @param recipe The Recipe object containing the steps to convert.
-     * @return List of RecipeStep objects representing the steps of the recipe.
-     */
-    private List<RecipeStep> getRecipeSteps(Recipe recipe) {
-        return recipe.getSteps().stream()
-                .map(step -> {
-                    RecipeStep.Builder stepBuilder = RecipeStep.newBuilder()
-                            .setInstruction(step.getInstruction());
-
-                    if (step.getType() == StepType.TIMER) {
-                        stepBuilder.setTimer(step.getTimer());
-                        stepBuilder.setType(RecipeStepType.TIMER);
-                        return stepBuilder.build();
-                    }
-
-                    stepBuilder.setType(RecipeStepType.DEFAULT);
-                    return stepBuilder.build();
-                })
-                .toList();
-    }
 }

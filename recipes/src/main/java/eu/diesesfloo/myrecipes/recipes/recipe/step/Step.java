@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Data
-public class RecipeStep {
+public class Step {
 
     private final StepType type;
 
@@ -13,11 +13,11 @@ public class RecipeStep {
 
     private final int timer;
 
-    public RecipeStep(String instruction) {
+    public Step(String instruction) {
         this(StepType.DEFAULT, instruction, 0);
     }
 
-    public RecipeStep(String instruction, int timer) {
+    public Step(String instruction, int timer) {
         this(StepType.TIMER, instruction, timer);
     }
 }
