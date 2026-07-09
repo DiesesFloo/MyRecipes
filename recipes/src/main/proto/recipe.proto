@@ -62,13 +62,14 @@ message GetRecipesByCategoryResponse {
 }
 
 message ShortRecipe {
-  string category = 1;
-  uint32 difficulty = 2;
-  uint32 cooking_time_minutes = 3;
-  uint32 calories = 4;
-  uint32 proteins = 5;
-  string title = 6;
-  string image_url = 7;
+  string id = 1;
+  string category = 2;
+  uint32 difficulty = 3;
+  uint32 cooking_time_minutes = 4;
+  uint32 calories = 5;
+  uint32 proteins = 6;
+  string title = 7;
+  string image_url = 8;
 }
 
 message UpdateRecipeRequest {

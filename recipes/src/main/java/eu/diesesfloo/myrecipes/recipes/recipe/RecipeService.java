@@ -46,7 +46,6 @@ public class RecipeService {
     @CacheEvict(value = "recipes_by_id", key = "#id")
     public void deleteRecipe(String id) {
         recipeRepository.deleteById(UUID.fromString(id));
-        //TODO: Delete from categories as well
     }
 
 }

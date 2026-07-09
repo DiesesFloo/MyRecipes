@@ -1,12 +1,15 @@
 package eu.diesesfloo.myrecipes.recipes.recipe;
 
 import eu.diesesfloo.myrecipes.recipes.proto.*;
+import eu.diesesfloo.myrecipes.recipes.recipe.category.RecipeByCategory;
+import eu.diesesfloo.myrecipes.recipes.recipe.category.RecipeByCategoryKey;
 import eu.diesesfloo.myrecipes.recipes.recipe.step.Step;
 import eu.diesesfloo.myrecipes.recipes.recipe.step.StepType;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -21,7 +24,7 @@ public class RecipeMapper {
      * @param request The create request containing the recipe data.
      * @return A Recipe object constructed from the request data.
      */
-    public Recipe fromCreateRequest(CreateRecipeRequest request) {
+    public Recipe recipeFromCreateRequest(CreateRecipeRequest request) {
         return Recipe.builder()
                 .id(UUID.randomUUID())
                 .category(request.getCategory())
@@ -58,6 +61,39 @@ public class RecipeMapper {
                 .setDescription(recipe.getDescription())
                 .setImageUrl(recipe.getImageUrl())
                 .addAllSteps(getResponseRecipeSteps(recipe))
+                .build();
+    }
+
+    /**
+     * Convert a set of {@link RecipeByCategory} objects to a {@link GetRecipesByCategoryResponse}.
+     *
+     * @param recipes The {@link RecipeByCategory} objects to convert.
+     * @return A {@link GetRecipesByCategoryResponse} constructed from the data.
+     */
+    public GetRecipesByCategoryResponse toGetResponse(Set<RecipeByCategory> recipes) {
+        return GetRecipesByCategoryResponse.newBuilder()
+                .addAllRecipes(recipes.stream()
+                        .map(this::toShortRecipe)
+                        .toList())
+                .build();
+    }
+
+    /**
+     * Convert a {@link RecipeByCategory} object to a {@link ShortRecipe}.
+     *
+     * @param recipe The recipe to convert
+     * @return A {@link ShortRecipe} constructed from the data.
+     */
+    private ShortRecipe toShortRecipe(RecipeByCategory recipe) {
+        return ShortRecipe.newBuilder()
+                .setCategory(recipe.getKey().getCategory())
+                .setId(recipe.getKey().getId().toString())
+                .setCalories(recipe.getCalories())
+                .setDifficulty(recipe.getDifficulty())
+                .setProteins(recipe.getProteins())
+                .setTitle(recipe.getTitle())
+                .setImageUrl(recipe.getImageUrl())
+                .setCookingTimeMinutes(recipe.getCookingTimeMinutes())
                 .build();
     }
 
@@ -109,11 +145,16 @@ public class RecipeMapper {
      * @param recipe The existing Recipe object to be updated.
      */
     public void applyUpdates(UpdateRecipeRequest req, Recipe recipe) {
+        applyMain(req, recipe);
         applyBasics(req, recipe);
-        applyNutrition(req, recipe);
         applyIngredients(req, recipe);
         applySteps(req, recipe);
         applyTags(req, recipe);
+    }
+
+    public void applyUpdates(UpdateRecipeRequest req, RecipeByCategory recipe) {
+        applyBasics(req, recipe);
+        if (req.hasCategory()) recipe.getKey().setCategory(req.getCategory());
     }
 
     /**
@@ -122,23 +163,17 @@ public class RecipeMapper {
      * @param req    The update request containing the new recipe data.
      * @param recipe The existing Recipe object to be updated.
      */
-    private void applyBasics(UpdateRecipeRequest req, Recipe recipe) {
+    private void applyMain(UpdateRecipeRequest req, Recipe recipe) {
         if (req.hasCategory()) recipe.setCategory(req.getCategory());
-        if (req.hasDifficulty()) recipe.setDifficulty(req.getDifficulty());
         if (req.hasServings()) recipe.setServings(req.getServings());
-        if (req.hasCookingTimeMinutes()) recipe.setCookingTimeMinutes(req.getCookingTimeMinutes());
-        if (req.hasTitle()) recipe.setTitle(req.getTitle());
         if (req.hasDescription()) recipe.setDescription(req.getDescription());
-        if (req.hasImageUrl()) recipe.setImageUrl(req.getImageUrl());
     }
 
-    /**
-     * Apply nutrition updates (calories, proteins) from the request to the recipe.
-     *
-     * @param req    The update request containing the new recipe data.
-     * @param recipe The existing Recipe object to be updated.
-     */
-    private void applyNutrition(UpdateRecipeRequest req, Recipe recipe) {
+    private void applyBasics(UpdateRecipeRequest req, BasicRecipe recipe) {
+        if (req.hasDifficulty()) recipe.setDifficulty(req.getDifficulty());
+        if (req.hasCookingTimeMinutes()) recipe.setCookingTimeMinutes(req.getCookingTimeMinutes());
+        if (req.hasTitle()) recipe.setTitle(req.getTitle());
+        if (req.hasImageUrl()) recipe.setImageUrl(req.getImageUrl());
         if (req.hasCalories()) recipe.setCalories(req.getCalories());
         if (req.hasProteins()) recipe.setProteins(req.getProteins());
     }
@@ -177,6 +212,27 @@ public class RecipeMapper {
         if (req.getTagsCount() > 0) {
             recipe.setTags(new HashSet<>(req.getTagsList()));
         }
+    }
+
+    /**
+     * Convert a {@link Recipe} object to a {@link RecipeByCategory} object.
+     *
+     * @param recipe The {@link Recipe} object containing the steps to convert.
+     * @return A {@link RecipeByCategory} object constructed from the {@link Recipe} data.
+     */
+    public RecipeByCategory toByCategory(Recipe recipe) {
+        return RecipeByCategory.builder()
+                .key(RecipeByCategoryKey.builder()
+                        .category(recipe.getCategory())
+                        .id(recipe.getId())
+                        .build())
+                .title(recipe.getTitle())
+                .difficulty(recipe.getDifficulty())
+                .cookingTimeMinutes(recipe.getCookingTimeMinutes())
+                .calories(recipe.getCalories())
+                .proteins(recipe.getProteins())
+                .imageUrl(recipe.getImageUrl())
+                .build();
     }
 
 }

@@ -1,6 +1,8 @@
 package eu.diesesfloo.myrecipes.recipes.recipe;
 
 import eu.diesesfloo.myrecipes.recipes.proto.*;
+import eu.diesesfloo.myrecipes.recipes.recipe.category.RecipeByCategory;
+import eu.diesesfloo.myrecipes.recipes.recipe.category.RecipeByCategoryService;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.grpc.server.service.GrpcService;
@@ -14,6 +16,7 @@ import org.springframework.grpc.server.service.GrpcService;
 public class RecipeGrpcService extends RecipeServiceGrpc.RecipeServiceImplBase {
 
     private final RecipeService recipeService;
+    private final RecipeByCategoryService recipeByCategoryService;
     private final RecipeMapper recipeMapper;
 
     /**
@@ -24,7 +27,9 @@ public class RecipeGrpcService extends RecipeServiceGrpc.RecipeServiceImplBase {
      */
     @Override
     public void addRecipe(CreateRecipeRequest request, StreamObserver<ChangeResponse> responseObserver) {
-        recipeService.saveRecipe(recipeMapper.fromCreateRequest(request));
+        Recipe recipe = recipeMapper.recipeFromCreateRequest(request);
+        recipeService.saveRecipe(recipe);
+        recipeByCategoryService.saveRecipe(recipeMapper.toByCategory(recipe));
 
         responseObserver.onNext(ChangeResponse.newBuilder().setSuccess(true).build());
     }
@@ -38,6 +43,8 @@ public class RecipeGrpcService extends RecipeServiceGrpc.RecipeServiceImplBase {
     @Override
     public void deleteRecipe(DeleteRecipeRequest request, StreamObserver<ChangeResponse> responseObserver) {
         recipeService.deleteRecipe(request.getUuid());
+        recipeByCategoryService.deleteRecipe(request.getUuid());
+
         responseObserver.onNext(ChangeResponse.newBuilder().setSuccess(true).build());
     }
 
@@ -49,9 +56,15 @@ public class RecipeGrpcService extends RecipeServiceGrpc.RecipeServiceImplBase {
      */
     @Override
     public void updateRecipe(UpdateRecipeRequest request, StreamObserver<ChangeResponse> responseObserver) {
-        recipeService.getRecipeById(request.getId())
+        String id = request.getId();
+
+        recipeService.getRecipeById(id)
                 .ifPresentOrElse(
-                        recipe -> responseObserver.onNext(handleUpdate(request, recipe)),
+                        recipe -> responseObserver.onNext(
+                                handleUpdate(
+                                        request,
+                                        recipe,
+                                        recipeByCategoryService.getById(id))),
                         () -> responseObserver.onNext(ChangeResponse.newBuilder()
                                 .setSuccess(false)
                                 .setError(404)
@@ -66,11 +79,26 @@ public class RecipeGrpcService extends RecipeServiceGrpc.RecipeServiceImplBase {
      * @param recipe  The existing recipe to be updated.
      * @return ChangeResponse indicating the success or failure of the update operation.
      */
-    private ChangeResponse handleUpdate(UpdateRecipeRequest request, Recipe recipe) {
+    private ChangeResponse handleUpdate(UpdateRecipeRequest request, Recipe recipe, RecipeByCategory recipeByCategory) {
         recipeMapper.applyUpdates(request, recipe);
-
         recipeService.saveRecipe(recipe);
+
+        handleCategory(request, recipeByCategory);
+
         return ChangeResponse.newBuilder().setSuccess(true).build();
+    }
+
+    /**
+     * Handle the update of a recipe's category based on the provided request and existing {@link RecipeByCategory}.
+     *
+     * @param request          The update request containing the new recipe data.
+     * @param recipeByCategory The existing recipe by category to be updated.
+     */
+    private void handleCategory(UpdateRecipeRequest request, RecipeByCategory recipeByCategory) {
+        recipeMapper.applyUpdates(request, recipeByCategory);
+
+        if (request.hasCategory()) recipeByCategoryService.deleteRecipe(request.getId());
+        recipeByCategoryService.saveRecipe(recipeByCategory);
     }
 
     /**
@@ -98,4 +126,18 @@ public class RecipeGrpcService extends RecipeServiceGrpc.RecipeServiceImplBase {
                         .build());
     }
 
+    /**
+     * Get recipes by its categories
+     *
+     * @param request          Request containing the category of the recipe to retrieve.
+     * @param responseObserver StreamObserver to send the response back to the client.
+     */
+    @Override
+    public void getRecipesByCategory(GetRecipesByCategoryRequest request, StreamObserver<GetRecipesByCategoryResponse> responseObserver) {
+        responseObserver.onNext(
+                recipeMapper.toGetResponse(
+                        recipeByCategoryService.getRecipesByCategory(request.getCategory())
+                )
+        );
+    }
 }
