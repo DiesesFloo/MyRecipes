@@ -1,13 +1,18 @@
-
-
 plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.0' apply false
     id 'io.spring.dependency-management' version '1.1.7' apply false
+    id("net.ltgt.errorprone") version "5.1.0" apply false
 }
 
 group = 'eu.diesesfloo'
 version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+}
 
 repositories {
     mavenCentral()
@@ -21,6 +26,7 @@ dependencies {
 subprojects {
     apply plugin: 'java'
     apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'net.ltgt.errorprone'
 
     repositories {
         mavenCentral()
@@ -41,7 +47,15 @@ subprojects {
 
         testCompileOnly 'org.projectlombok:lombok:1.18.46'
         testAnnotationProcessor 'org.projectlombok:lombok:1.18.46'
+
+        errorprone("com.google.errorprone:error_prone_core:2.50.0")
     }
+
+    compileJava {
+        options.errorprone.disableWarningsInGeneratedCode = true   // for @Generated
+        options.errorprone.excludedPaths = ".*/build/generated/.*" // for other generated scenarios, e.g. Protobuf
+    }
+
 
     test {
         useJUnitPlatform()
