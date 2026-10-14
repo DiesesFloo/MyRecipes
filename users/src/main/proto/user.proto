@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "eu.diesesfloo.myrecipes.users.proto";
+option java_outer_classname = "UsersProto";
+
+service UserService {
+  rpc CreateUser(CreateUserRequest) returns (UserResponse);
+  rpc GetUserById(GetUserByIdRequest) returns (UserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UserResponse);
+
+  rpc RecordCookingHistory(RecordCookingHistoryRequest) returns (CookingHistoryResponse);
+  rpc GetCookingHistory(GetCookingHistoryRequest) returns (CookingHistoryListResponse);
+
+  rpc RateRecipe(RateRecipeRequest) returns (RatingResponse);
+  rpc GetUserRatings(GetUserRatingsRequest) returns (UserRatingsResponse);
+
+  rpc AddFavorite(FavoriteRequest) returns (FavoriteResponse);
+  rpc RemoveFavorite(FavoriteRequest) returns (FavoriteResponse);
+  rpc GetFavorites(GetFavoritesRequest) returns (FavoritesResponse);
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  string display_name = 3;
+  repeated string dietary_preferences = 4;
+  string skill_level = 5;
+}
+
+message GetUserByIdRequest {
+  string id = 1;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  optional string email = 2;
+  optional string display_name = 3;
+  repeated string dietary_preferences = 4;
+  optional string skill_level = 5;
+}
+
+message UserResponse {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  string display_name = 4;
+  repeated string dietary_preferences = 5;
+  string skill_level = 6;
+  int64 created_at = 7;
+}
+
+message RecordCookingHistoryRequest {
+  string user_id = 1;
+  string recipe_id = 2;
+  string recipe_title = 3;
+  optional string notes = 4;
+}
+
+message CookingHistoryItem {
+  string user_id = 1;
+  string recipe_id = 2;
+  string recipe_title = 3;
+  string notes = 4;
+  int64 cooked_at = 5;
+}
+
+message CookingHistoryResponse {
+  bool success = 1;
+  CookingHistoryItem item = 2;
+}
+
+message GetCookingHistoryRequest {
+  string user_id = 1;
+  uint32 limit = 2;
+}
+
+message CookingHistoryListResponse {
+  repeated CookingHistoryItem items = 1;
+}
+
+message RateRecipeRequest {
+  string user_id = 1;
+  string recipe_id = 2;
+  uint32 rating = 3;
+  optional string comment = 4;
+}
+
+message RecipeRatingItem {
+  string user_id = 1;
+  string recipe_id = 2;
+  uint32 rating = 3;
+  string comment = 4;
+  int64 rated_at = 5;
+}
+
+message RatingResponse {
+  bool success = 1;
+  RecipeRatingItem rating = 2;
+}
+
+message GetUserRatingsRequest {
+  string user_id = 1;
+}
+
+message UserRatingsResponse {
+  repeated RecipeRatingItem ratings = 1;
+}
+
+message FavoriteRequest {
+  string user_id = 1;
+  string recipe_id = 2;
+  optional string recipe_title = 3;
+}
+
+message FavoriteItem {
+  string user_id = 1;
+  string recipe_id = 2;
+  string recipe_title = 3;
+  int64 added_at = 4;
+}
+
+message FavoriteResponse {
+  bool success = 1;
+}
+
+message GetFavoritesRequest {
+  string user_id = 1;
+}
+
+message FavoritesResponse {
+  repeated FavoriteItem favorites = 1;
+}
