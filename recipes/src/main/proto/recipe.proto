@@ -10,6 +10,7 @@ service RecipeService {
   rpc UpdateRecipe(UpdateRecipeRequest) returns (ChangeResponse);
   rpc GetRecipeById(GetRecipeByIdRequest) returns (GetRecipeByIdResponse);
   rpc GetRecipesByCategory(GetRecipesByCategoryRequest) returns (GetRecipesByCategoryResponse);
+  rpc GetRecipesByTag(GetRecipesByTagRequest) returns (GetRecipesByTagResponse);
 }
 
 message CreateRecipeRequest {
@@ -56,6 +57,18 @@ message GetRecipeByIdResponse {
 }
 
 message GetRecipesByCategoryResponse {
+  repeated ShortRecipe recipes = 1;
+
+  optional uint32 error = 2;
+}
+
+message GetRecipesByTagRequest {
+  string tag = 1;
+  uint32 amount = 2;
+  uint32 page = 3;
+}
+
+message GetRecipesByTagResponse {
   repeated ShortRecipe recipes = 1;
 
   optional uint32 error = 2;

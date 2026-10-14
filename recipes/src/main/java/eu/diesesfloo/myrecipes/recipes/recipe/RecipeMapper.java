@@ -5,12 +5,15 @@ import eu.diesesfloo.myrecipes.recipes.recipe.category.RecipeByCategory;
 import eu.diesesfloo.myrecipes.recipes.recipe.category.RecipeByCategoryKey;
 import eu.diesesfloo.myrecipes.recipes.recipe.step.Step;
 import eu.diesesfloo.myrecipes.recipes.recipe.step.StepType;
+import eu.diesesfloo.myrecipes.recipes.recipe.tag.RecipeByTag;
+import eu.diesesfloo.myrecipes.recipes.recipe.tag.RecipeByTagKey;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Mapper class for converting between Recipe objects and gRPC request/response objects.
@@ -38,6 +41,7 @@ public class RecipeMapper {
                 .description(request.getDescription())
                 .imageUrl(request.getImageUrl())
                 .steps(getStepsFromRequest(request.getStepsList()))
+                .tags(new HashSet<>(request.getTagsList()))
                 .build();
     }
 
@@ -48,20 +52,37 @@ public class RecipeMapper {
      * @return A GetRecipeByIdResponse constructed from the Recipe data.
      */
     public GetRecipeByIdResponse toGetResponse(Recipe recipe) {
-        return GetRecipeByIdResponse.newBuilder()
-                .setId(recipe.getId().toString())
-                .setCategory(recipe.getCategory())
-                .addAllIngredients(recipe.getIngredients())
+        GetRecipeByIdResponse.Builder builder = GetRecipeByIdResponse.newBuilder()
+                .setId(recipe.getId() != null ? recipe.getId().toString() : "")
                 .setDifficulty(recipe.getDifficulty())
                 .setServings(recipe.getServings())
                 .setCookingTimeMinutes(recipe.getCookingTimeMinutes())
                 .setCalories(recipe.getCalories())
-                .setProteins(recipe.getProteins())
-                .setTitle(recipe.getTitle())
-                .setDescription(recipe.getDescription())
-                .setImageUrl(recipe.getImageUrl())
-                .addAllSteps(getResponseRecipeSteps(recipe))
-                .build();
+                .setProteins(recipe.getProteins());
+
+        if (recipe.getCategory() != null) {
+            builder.setCategory(recipe.getCategory());
+        }
+        if (recipe.getTitle() != null) {
+            builder.setTitle(recipe.getTitle());
+        }
+        if (recipe.getDescription() != null) {
+            builder.setDescription(recipe.getDescription());
+        }
+        if (recipe.getImageUrl() != null) {
+            builder.setImageUrl(recipe.getImageUrl());
+        }
+        if (recipe.getIngredients() != null) {
+            builder.addAllIngredients(recipe.getIngredients());
+        }
+        if (recipe.getSteps() != null) {
+            builder.addAllSteps(getResponseRecipeSteps(recipe));
+        }
+        if (recipe.getTags() != null) {
+            builder.addAllTags(recipe.getTags());
+        }
+
+        return builder.build();
     }
 
     /**
@@ -79,22 +100,92 @@ public class RecipeMapper {
     }
 
     /**
+     * Convert a list of {@link RecipeByCategory} objects to a {@link GetRecipesByCategoryResponse}.
+     * Used for paginated results.
+     *
+     * @param recipes The list of {@link RecipeByCategory} objects to convert.
+     * @return A {@link GetRecipesByCategoryResponse} constructed from the data.
+     */
+    public GetRecipesByCategoryResponse toGetResponse(List<RecipeByCategory> recipes) {
+        return GetRecipesByCategoryResponse.newBuilder()
+                .addAllRecipes(recipes.stream()
+                        .map(this::toShortRecipe)
+                        .toList())
+                .build();
+    }
+
+    /**
+     * Convert a set of {@link RecipeByTag} objects to a {@link GetRecipesByTagResponse}.
+     *
+     * @param recipes The {@link RecipeByTag} objects to convert.
+     * @return A {@link GetRecipesByTagResponse} constructed from the data.
+     */
+    public GetRecipesByTagResponse toTagGetResponse(Set<RecipeByTag> recipes) {
+        return GetRecipesByTagResponse.newBuilder()
+                .addAllRecipes(recipes.stream()
+                        .map(this::toShortRecipe)
+                        .toList())
+                .build();
+    }
+
+    /**
      * Convert a {@link RecipeByCategory} object to a {@link ShortRecipe}.
      *
      * @param recipe The recipe to convert
      * @return A {@link ShortRecipe} constructed from the data.
      */
     private ShortRecipe toShortRecipe(RecipeByCategory recipe) {
-        return ShortRecipe.newBuilder()
-                .setCategory(recipe.getKey().getCategory())
-                .setId(recipe.getKey().getId().toString())
+        ShortRecipe.Builder builder = ShortRecipe.newBuilder()
                 .setCalories(recipe.getCalories())
                 .setDifficulty(recipe.getDifficulty())
                 .setProteins(recipe.getProteins())
-                .setTitle(recipe.getTitle())
-                .setImageUrl(recipe.getImageUrl())
-                .setCookingTimeMinutes(recipe.getCookingTimeMinutes())
-                .build();
+                .setCookingTimeMinutes(recipe.getCookingTimeMinutes());
+
+        if (recipe.getKey() != null) {
+            if (recipe.getKey().getCategory() != null) {
+                builder.setCategory(recipe.getKey().getCategory());
+            }
+            if (recipe.getKey().getId() != null) {
+                builder.setId(recipe.getKey().getId().toString());
+            }
+        }
+        if (recipe.getTitle() != null) {
+            builder.setTitle(recipe.getTitle());
+        }
+        if (recipe.getImageUrl() != null) {
+            builder.setImageUrl(recipe.getImageUrl());
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * Convert a {@link RecipeByTag} object to a {@link ShortRecipe}.
+     *
+     * @param recipe The recipe to convert
+     * @return A {@link ShortRecipe} constructed from the data.
+     */
+    private ShortRecipe toShortRecipe(RecipeByTag recipe) {
+        ShortRecipe.Builder builder = ShortRecipe.newBuilder()
+                .setCalories(recipe.getCalories())
+                .setDifficulty(recipe.getDifficulty())
+                .setProteins(recipe.getProteins())
+                .setCookingTimeMinutes(recipe.getCookingTimeMinutes());
+
+        if (recipe.getCategory() != null) {
+            builder.setCategory(recipe.getCategory());
+        }
+        if (recipe.getKey() != null && recipe.getKey().getId() != null) {
+            builder.setId(recipe.getKey().getId().toString());
+        }
+        if (recipe.getTitle() != null) {
+            builder.setTitle(recipe.getTitle());
+        }
+        if (recipe.getImageUrl() != null) {
+            builder.setImageUrl(recipe.getImageUrl());
+        }
+
+        return builder.build();
     }
 
     /**
@@ -104,18 +195,24 @@ public class RecipeMapper {
      * @return List of RecipeStep objects representing the steps of the recipe.
      */
     private List<RecipeStep> getResponseRecipeSteps(Recipe recipe) {
+        if (recipe.getSteps() == null) {
+            return List.of();
+        }
         return recipe.getSteps().stream()
                 .map(step -> {
-                    RecipeStep.Builder stepBuilder = RecipeStep.newBuilder()
-                            .setInstruction(step.getInstruction());
+                    RecipeStep.Builder stepBuilder = RecipeStep.newBuilder();
+
+                    if (step.getInstruction() != null) {
+                        stepBuilder.setInstruction(step.getInstruction());
+                    }
 
                     if (step.getType() == StepType.TIMER) {
                         stepBuilder.setTimer(step.getTimer());
                         stepBuilder.setType(RecipeStepType.TIMER);
-                        return stepBuilder.build();
+                    } else {
+                        stepBuilder.setType(RecipeStepType.DEFAULT);
                     }
 
-                    stepBuilder.setType(RecipeStepType.DEFAULT);
                     return stepBuilder.build();
                 })
                 .toList();
@@ -233,6 +330,34 @@ public class RecipeMapper {
                 .proteins(recipe.getProteins())
                 .imageUrl(recipe.getImageUrl())
                 .build();
+    }
+
+    /**
+     * Convert a {@link Recipe} to a set of {@link RecipeByTag} entries — one per tag.
+     *
+     * @param recipe The recipe to convert.
+     * @return A set of {@link RecipeByTag} entries, one for each tag on the recipe.
+     */
+    public Set<RecipeByTag> toByTags(Recipe recipe) {
+        if (recipe.getTags() == null || recipe.getTags().isEmpty()) {
+            return Set.of();
+        }
+
+        return recipe.getTags().stream()
+                .map(tag -> RecipeByTag.builder()
+                        .key(RecipeByTagKey.builder()
+                                .tag(tag)
+                                .id(recipe.getId())
+                                .build())
+                        .category(recipe.getCategory())
+                        .title(recipe.getTitle())
+                        .difficulty(recipe.getDifficulty())
+                        .cookingTimeMinutes(recipe.getCookingTimeMinutes())
+                        .calories(recipe.getCalories())
+                        .proteins(recipe.getProteins())
+                        .imageUrl(recipe.getImageUrl())
+                        .build())
+                .collect(Collectors.toSet());
     }
 
 }
